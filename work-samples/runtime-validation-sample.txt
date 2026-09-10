@@ -1,0 +1,44 @@
+RUNTIME VALIDATION — FICTIONAL WORK SAMPLE
+Daniel | September 9, 2026
+
+Purpose
+A small demonstration of spec-driven review with reproducible inputs, observed behavior, a targeted revision and regression checks. This is a deliberately constructed example, not a previous client's system and not a review of your code.
+
+Contract used for this sample
+Input is a JSON object containing exactly op, a and b. op must equal "add". Operands must be integer JSON tokens within signed 64-bit range. Their sum must also remain within that range. Duplicate keys, extra fields, non-standard JSON constants, strings, booleans and floating-point tokens are rejected.
+
+Observed checks
+26 explicit fixtures were run locally against an original Python example and a revised version. Original: 17/26 matched the contract. Revised: 26/26 matched. Valid cases included both range boundaries, zero, negatives and cancellation across the boundaries. Rejections included malformed JSON, missing fields, wrong operations, top-level arrays/null and trailing data.
+
+Finding 1: boolean values accepted as integers
+Input: {"op":"add","a":true,"b":2}
+Expected: rejection. Original result: 3.
+Cause: isinstance(value, int) also accepts Python booleans.
+Revision: require type(value) is int.
+Verified by fixtures for both true and false.
+
+Finding 2: duplicate keys silently replace earlier values
+Input: {"op":"add","a":1,"a":9,"b":2}
+Expected: rejection. Original result: 11.
+Revision: detect duplicate keys during JSON object construction.
+This prevents a caller's first value from being silently discarded.
+
+Finding 3: operand and result ranges are unchecked
+Input: {"op":"add","a":9223372036854775807,"b":1}
+Expected: rejection. Original result: 9223372036854775808.
+Revision: check each operand and the result against the stated signed 64-bit limits.
+Verified independently for upper/lower operand bounds, overflow and underflow.
+
+Finding 4: strict input contract is not enforced
+Input: {"op":"add","a":2,"b":3,"extra":4}
+Expected: rejection. Original result: 5.
+An extra field containing NaN was also accepted and ignored.
+Revision: require the exact field set and reject non-standard JSON constants during decoding.
+
+Scope and limits
+The test runner normalizes ValueError, KeyError and TypeError to rejection; it does not assert production error codes or messages. The suite is a focused regression sample, not an exhaustive proof or security audit. Only Python was executed. No Rust runtime, browser interface, client repository, deployment or confidential data was examined.
+
+How this maps to a multi-runtime review
+Agree acceptance rules first, turn each rule into shared fixtures, run the same inputs against each implementation, and report disagreements with exact reproduction steps. Separate a disagreement with the specification from an ambiguity in the specification. Deliver a requirement-to-test map, prioritized findings, targeted fixes if included in scope, and a rerunnable results report.
+
+Source and fixtures are available on request.
